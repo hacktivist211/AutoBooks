@@ -6,21 +6,21 @@ AutoBooks is a live, agentic accounting system designed to demonstrate how SELF-
 
 ### Key Features
 
-✅ **Real-time Document Monitoring** - Watches inbox for new/modified PDF and Excel files
+ **Real-time Document Monitoring** - Watches inbox for new/modified PDF and Excel files
 
-✅ **Intelligent Text Extraction** - OCR for PDFs, parsing for structured data
+ **Intelligent Text Extraction** - OCR for PDFs, parsing for structured data
 
-✅ **Smart Chunking** - Semantic text chunking with overlap for context preservation
+ **Smart Chunking** - Semantic text chunking with overlap for context preservation
 
-✅ **Vector Embeddings** - Sentence Transformers + ChromaDB for semantic search
+ **Vector Embeddings** - Sentence Transformers + ChromaDB for semantic search
 
-✅ **SELF-RAG Agent** - Confidence-aware classification with context retrieval
+ **SELF-RAG Agent** - Confidence-aware classification with context retrieval
 
-✅ **TDS Handling** - Automatic TDS deduction for rent, salary, professional services, contracts
+ **TDS Handling** - Automatic TDS deduction for rent, salary, professional services, contracts
 
-✅ **Rule Learning** - Learns from user corrections and applies rules to future documents
+ **Rule Learning** - Learns from user corrections and applies rules to future documents
 
-✅ **Live Excel Output** - Continuously updated ledger with transaction details
+ **Live Excel Output** - Continuously updated ledger with transaction details
 
 ## Architecture
 
@@ -128,7 +128,7 @@ Regex-based extraction with confidence scoring:
 - Confidence-based decision making
 - Handles multiple TDS categories
 
-### 7. **self_rag_agent.py** - The Core Intelligence ⭐
+### 7. **self_rag_agent.py** - The Core Intelligence 
 
 **SELF-RAG Flow:**
 ```
@@ -427,8 +427,8 @@ Live Excel file with columns:
 - GST Amount, Confidence, Rule Applied, Status
 
 Color coding:
-- 🟢 Green: Approved transactions
-- 🔴 Red: Flagged for review
+-  Green: Approved transactions
+-  Red: Flagged for review
 
 ### 2. **learned_rules.json**
 Vendor-specific classification rules:
@@ -527,4 +527,4 @@ Demo Purpose: Intelligent Accounting Automation
 
 ---
 
-**AutoBooks** - Making Accounting Smarter, One Invoice at a Time 📊✨
+**AutoBooks** - Making Accounting Smarter, One Invoice at a Time 
