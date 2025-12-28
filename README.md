@@ -2,7 +2,7 @@
 
 ## Overview
 
-AutoBooks is a Hackathon-grade system that automates accounting document processing using **SELF-RAG** (Self-Reflective Retrieval-Augmented Generation). It monitors an inbox folder for incoming invoices, extracts accounting fields, classifies transactions to ledger accounts, and learns from user corrections to improve future decisions.
+AutoBooks is a live, agentic accounting system designed to demonstrate how SELF-RAG can be applied to real-world financial workflows. It continuously monitors an inbox folder for incoming or updated accounting documents, incrementally processes them using a streaming data pipeline, and extracts key accounting information such as parties, amounts, and descriptions. The system classifies transactions into appropriate ledger accounts with confidence-aware reasoning and, when ambiguity arises, incorporates one-time user feedback as persistent knowledge. This learned context is applied immediately to future documents, allowing AutoBooks to adapt in real time while producing continuously updated, Excel-ready accounting outputs suitable for downstream financial workflows.
 
 ### Key Features
 
