@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 
 class DocumentMetadata(BaseModel):
@@ -62,3 +62,74 @@ class ChunkMetadata(BaseModel):
     source_path: str
     chunk_text: str
     metadata: Dict = Field(default_factory=dict)
+
+# New Pydantic Models
+
+class InvoiceFields(BaseModel):
+    """Extracted fields from invoice documents with validation."""
+    vendor: str = Field(..., description="Name of the vendor or supplier")
+    amount: float = Field(..., gt=0, description="Total invoice amount")
+    date: str = Field(..., description="Invoice date in YYYY-MM-DD format")
+    tds_percentage: Optional[float] = Field(None, ge=0, le=100, description="TDS percentage if applicable")
+    raw_text: str = Field(..., description="Raw extracted text from document")
+    confidence: float = Field(..., ge=0, le=1, description="Extraction confidence score")
+
+    @field_validator('date')
+    @classmethod
+    def validate_date_format(cls, v):
+        """Validate date format."""
+        try:
+            datetime.strptime(v, '%Y-%m-%d')
+            return v
+        except ValueError:
+            raise ValueError('Date must be in YYYY-MM-DD format')
+
+class Transaction(BaseModel):
+    """Accounting transaction record."""
+    date: str = Field(..., description="Transaction date in YYYY-MM-DD format")
+    vendor: str = Field(..., description="Vendor name")
+    debit_account: str = Field(..., description="Debit account name")
+    debit_amount: float = Field(..., gt=0, description="Amount debited")
+    credit_account: str = Field(..., description="Credit account name")
+    credit_amount: float = Field(..., gt=0, description="Amount credited")
+    tds_account: Optional[str] = Field(None, description="TDS account if applicable")
+    tds_amount: Optional[float] = Field(None, ge=0, description="TDS amount deducted")
+    confidence: float = Field(..., ge=0, le=1, description="Classification confidence")
+    status: str = Field("pending", description="Transaction status")
+
+    @field_validator('date')
+    @classmethod
+    def validate_date_format(cls, v):
+        """Validate date format."""
+        try:
+            datetime.strptime(v, '%Y-%m-%d')
+            return v
+        except ValueError:
+            raise ValueError('Date must be in YYYY-MM-DD format')
+
+    @field_validator('status')
+    @classmethod
+    def validate_status(cls, v):
+        """Validate status values."""
+        valid_statuses = ["pending", "approved", "flagged", "rejected", "AUTO_POSTED", "USER_CONFIRMED", "PATTERN_MATCHED"]
+        if v not in valid_statuses:
+            raise ValueError(f'Status must be one of {valid_statuses}')
+        return v
+
+class Rule(BaseModel):
+    """Learned classification rule for vendors."""
+    vendor: str = Field(..., description="Vendor name this rule applies to")
+    keywords: List[str] = Field(default_factory=list, description="Keywords associated with this vendor")
+    debit_account: str = Field(..., description="Debit account for this vendor")
+    credit_account: str = Field(..., description="Credit account for this vendor")
+    tds_applicable: bool = Field(False, description="Whether TDS is applicable")
+    learned_at: datetime = Field(default_factory=datetime.now, description="When this rule was learned")
+    applied_count: int = Field(0, ge=0, description="Number of times this rule has been applied")
+
+    @field_validator('keywords')
+    @classmethod
+    def validate_keywords(cls, v):
+        """Ensure keywords are non-empty strings."""
+        if not all(isinstance(k, str) and k.strip() for k in v):
+            raise ValueError('All keywords must be non-empty strings')
+        return v
