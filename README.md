@@ -1,4 +1,4 @@
-# AutoBooks - Intelligent Accounting Document Processing System
+# AutoBooks 
 
 ##  Overview
 
