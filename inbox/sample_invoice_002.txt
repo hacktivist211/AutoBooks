@@ -1,0 +1,35 @@
+INVOICE
+
+Invoice Number: INV-2024-002
+Invoice Date: 2024-12-21
+Vendor: ABC Rent & Lease Services
+
+Property Details:
+Commercial Office Space
+Address: 456 Commerce Plaza, Bangalore
+Monthly Rent: ₹50000
+
+Rental Period: December 2024
+
+TDS Category: Rent
+TDS Applicable: YES
+TDS Percentage: 10%
+TDS Amount: ₹5000
+
+Invoice Breakdown:
+Monthly Rent: ₹50000
+Less: TDS @ 10%: (₹5000)
+Net Amount Due: ₹45000
+
+GST Details:
+SGST @ 9%: ₹4500
+CGST @ 9%: ₹4500
+Total GST: ₹9000
+
+Total Amount Due: ₹54000
+Net After TDS: ₹49000
+
+Bank Details:
+Account Name: ABC Rent & Lease Services
+Account Number: 1234567890
+IFSC Code: SBIN0001234

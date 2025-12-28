@@ -1,0 +1,36 @@
+INVOICE
+
+Invoice Number: INV-2024-001
+Invoice Date: 2024-12-20
+
+Bill To:
+AutoBooks Pvt Ltd
+123 Tech Park Road
+Bangalore - 560034
+
+Vendor Details:
+M/s Premium Office Furnishings
+Office Furnishing Supplier
+123 Business Street
+Bangalore - 560001
+
+Description of Services/Goods:
+Office Furniture - Desk Set with Chair
+Quantity: 5
+Unit Price: ₹8000
+Total Item Amount: ₹40000
+
+GST Details:
+SGST @ 9%: ₹3600
+CGST @ 9%: ₹3600
+Total GST: ₹7200
+
+Invoice Summary:
+Subtotal: ₹40000
+GST (18%): ₹7200
+Grand Total: ₹47200
+
+Payment Terms: Due within 30 days
+Mode of Payment: NEFT / Bank Transfer
+
+Thank you for your business!

@@ -1,0 +1,42 @@
+INVOICE
+
+Invoice Number: INV-2024-003
+Invoice Date: 2024-12-22
+
+From:
+Professional Consulting Services Ltd
+Business Consultant Services
+Bangalore
+
+To:
+AutoBooks Pvt Ltd
+Tech Park, Bangalore
+
+Service Details:
+Management Consulting Services
+Project Duration: 1 Month
+Daily Rate: ₹5000
+Days: 20
+Total Amount: ₹100000
+
+Description:
+Business Process Optimization Consultation
+
+TDS Details:
+Withholding Category: Professional Services / Consultancy
+TDS Rate: 10%
+TDS Amount: ₹10000
+
+GST Information:
+IGST @ 18%: ₹18000
+
+Invoice Summary:
+Professional Fees: ₹100000
+TDS Deduction: (₹10000)
+GST: ₹18000
+Net Amount: ₹108000
+
+Payment Due Date: 2024-12-31
+Payment Method: Cheque / Bank Transfer
+
+Terms: Service completed as per engagement letter dated 2024-11-15
