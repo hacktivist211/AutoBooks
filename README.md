@@ -198,7 +198,7 @@ AutoBooks/
 
 1. **Clone the repository**
    ```bash
-   git clone <repo-url>
+   git clone git clone https://github.com/hacktivist211/AutoBooks.git
    cd AutoBooks
    ```
 
@@ -213,13 +213,7 @@ AutoBooks/
    pip install -r requirements.txt
    ```
 
-4. **Configure environment** (update `.env` as needed)
-   ```bash
-   cp .env.example .env  # If provided
-   # Edit .env with your paths and settings
-   ```
-
-5. **Run the system**
+4. **Run the system**
    ```bash
    python main.py
    ```
@@ -270,7 +264,7 @@ SUPPORTED_FORMATS=[".pdf", ".xlsx", ".txt"] # Supported input formats
 
 ---
 
-## 🔄 Processing Pipeline
+##  Processing Pipeline
 
 ### Step-by-Step Flow
 
@@ -319,7 +313,7 @@ SUPPORTED_FORMATS=[".pdf", ".xlsx", ".txt"] # Supported input formats
 
 ---
 
-## 📊 SELF-RAG Implementation Details
+##  SELF-RAG Implementation Details
 
 ### What is SELF-RAG?
 
@@ -412,7 +406,7 @@ Run main.py to process these samples.
 
 ---
 
-## 🔍 Output Format
+##  Output Format
 
 ### Excel Ledger (autobooks_ledger.xlsx)
 
