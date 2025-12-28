@@ -1,530 +1,491 @@
 # AutoBooks - Intelligent Accounting Document Processing System
 
-## Overview
+##  Overview
 
-AutoBooks is a live, agentic accounting system designed to demonstrate how SELF-RAG can be applied to real-world financial workflows. It continuously monitors an inbox folder for incoming or updated accounting documents, incrementally processes them using a streaming data pipeline, and extracts key accounting information such as parties, amounts, and descriptions. The system classifies transactions into appropriate ledger accounts with confidence-aware reasoning and, when ambiguity arises, incorporates one-time user feedback as persistent knowledge. This learned context is applied immediately to future documents, allowing AutoBooks to adapt in real time while producing continuously updated, Excel-ready accounting outputs suitable for downstream financial workflows.
+AutoBooks is an intelligent, agentic accounting system that automates the extraction and classification of financial documents (invoices, vouchers, bills) into appropriate ledger accounts. It demonstrates **Self-RAG (Self-Reflective Retrieval-Augmented Generation)** in production, combining OCR, NLP, vector embeddings, and LLM reasoning to process accounting documents with high confidence while learning from user feedback.
 
-### Key Features
+### Problem Statement
 
- **Real-time Document Monitoring** - Watches inbox for new/modified PDF and Excel files
+Accounting teams manually:
+- Extract data from scanned invoices/vouchers
+- Classify transactions to correct ledger accounts
+- Handle Tax Deduction at Source (TDS) calculations
+- Update accounting ledgers in Tally ERP
 
- **Intelligent Text Extraction** - OCR for PDFs, parsing for structured data
+###  Key Features
 
- **Smart Chunking** - Semantic text chunking with overlap for context preservation
+| Feature | Description |
+|---------|-------------|
+| **Real-time Monitoring** | Watches inbox folder for new/modified PDF, Excel, and text files |
+| **Intelligent Text Extraction** | OCR via Tesseract for PDFs; structured parsing for Excel |
+| **Smart Field Extraction** | Regex-based extraction of vendor name, amount, date, GST, TDS |
+| **Confidence Scoring** | Rule-based scoring (0.0-1.0) based on field extraction success |
+| **SELF-RAG Decision Engine** | Confidence thresholds trigger different actions: auto-post, retrieve context, or ask user |
+| **Vector Search** | Sentence Transformers + ChromaDB for semantic similarity matching |
+| **TDS Handling** | Automatic TDS deduction (rent: 10%, salary: 5%, professional: 10%, contract: 5%) |
+| **Rule Learning** | Learn from user corrections; apply rules persistently to future documents |
+| **Excel Output** | Tally-compatible ledger in XLSX format with formatting and validation |
+| **Audit Trail** | File archiving, transaction logging, and status tracking |
 
- **Vector Embeddings** - Sentence Transformers + ChromaDB for semantic search
-
- **SELF-RAG Agent** - Confidence-aware classification with context retrieval
-
- **TDS Handling** - Automatic TDS deduction for rent, salary, professional services, contracts
-
- **Rule Learning** - Learns from user corrections and applies rules to future documents
-
- **Live Excel Output** - Continuously updated ledger with transaction details
+---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        INBOX MONITOR                        │
-│         (Real-time document stream detection)               │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    DOCUMENT DECODER                         │
-│         (OCR, parsing, text extraction)                     │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    TEXT CHUNKER                             │
-│       (Semantic chunking with overlap for context)          │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 EMBEDDING MANAGER                           │
-│    (Sentence Transformers → ChromaDB vector store)          │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-        ┌────────────┴────────────┐
-        │                         │
-        ▼                         │
-┌──────────────────┐              │
-│ SELF-RAG AGENT   │              │
-│ ┌──────────────┐ │              │
-│ │ Extraction   │ │              │
-│ │ Validation   │ │              │
-│ │ Confidence   │ │──────────────┤
-│ │ Assessment   │ │    Query     │
-│ │              │ │    ChromaDB  │
-│ │ Low Conf? ───┼──────────────► │
-│ │ Retrieve     │ │              │
-│ │ Context      │ │              │
-│ │ Reason       │ │              │
-│ │ Learn Rules  │ │              │
-│ └──────────────┘ │              │
-└────────────────┬─┘              │
-                 │                │
-        ┌────────┴────────┐       │
-        │                 │       │
-        ▼                 ▼       │
-┌──────────────────┐              │
-│ LEDGER           │              │
-│ CLASSIFIER       │◄─────────────┘
-└────────────────┬─┘
-                 │
-                 ▼
-┌──────────────────────────────────────┐
-│  TRANSACTION GENERATOR               │
-│  (Journal entries, TDS calculations) │
-└────────────────┬─────────────────────┘
-                 │
-                 ▼
-┌──────────────────────────────────────┐
-│  EXCEL LEDGER OUTPUT                 │
-│  (Live, continuously updated)        │
-└──────────────────────────────────────┘
+INPUT STREAM
+     │
+     ▼
+┌─────────────────────────────────────────────────┐
+│     Document Monitor (Polling)                  │
+│  Watches: ./inbox/*.{pdf,xlsx,txt}              │
+│  Detects: added, modified, deleted files        │
+└──────────────────┬──────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────┐
+│     OCR Engine (Tesseract)                      │
+│  PDFs → Images → Text via pytesseract           │
+│  Excel → Cell extraction                        │
+│  TXT → Direct read                              │
+└──────────────────┬──────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────┐
+│     Field Extractor (Regex)                     │
+│  Extracts: vendor, amount, date, gst, tds       │
+│  Validates: types, ranges, formats              │
+└──────────────────┬──────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────┐
+│     Confidence Scorer (Rule-based)              │
+│  Scores extraction quality (0.0-1.0)            │
+│  Per-field confidence breakdown                 │
+└──────────────────┬──────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────┐
+│     SELF-RAG Decision Engine                    │
+│                                                 │
+│  ≥ 0.75? ──► AUTO-POST (create transaction)     │
+│                                                 │
+│  0.50-0.75? ──► Query ChromaDB for similar      │
+│                 patterns → match? → post        │
+│                 no match? → ask user            │
+│                                                 │
+│  < 0.50? ──► Ask user directly                  │
+│                                                 │
+│  User feedback? ──► Learn rule + store          │
+└──────────────────┬──────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────┐
+│     Text Chunker (Semantic)                     │
+│  Chunks: 500 chars with 50-char overlap         │
+│  Purpose: Preserve context for embeddings       │
+└──────────────────┬──────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────┐
+│     Embedding Manager (Sentence Transformers)   │ 
+│  Model: BAAI/bge-m3 or all-MiniLM-L6-v2         |
+│  Storage: ChromaDB (persistent)                 │
+│  Use: Semantic similarity search                │
+└──────────────────┬──────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────┐
+│     Rules Manager + Vector Store                │
+│  Persists: rules.json (learned patterns)        │
+│  Persists: chroma.sqlite3 (embeddings)          │
+│  Applies: Rules to future documents             │
+└──────────────────┬──────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────┐
+│     Excel Ledger Writer                         │
+│  Output: autobooks_ledger.xlsx                  │
+│  Columns: Date, Vendor, Debit Acct, Debit Amt,  │
+│           Credit Acct, Credit Amt, TDS Acct,    │
+│           TDS Amt, Confidence, Status           │
+└──────────────────┬──────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────┐
+│     Output                                      │
+│  Tally-ready Excel ledger + archive folder      │
+│  (for downstream ERP integration)               │
+└─────────────────────────────────────────────────┘
 ```
-
-## System Components
-
-### 1. **document_monitor.py** - Real-time Inbox Monitoring
-- Simulates Pathway filesystem connector
-- Detects file additions, modifications, deletions
-- Maintains file state via hashing
-- Polls inbox at configurable interval
-
-### 2. **document_decoder.py** - Multi-Format Document Extraction
-- **PDF OCR**: Uses Tesseract via pdf2image
-- **Excel Parsing**: Reads structured data from sheets
-- **Metadata Extraction**: Document IDs, timestamps, hash for deduplication
-
-### 3. **text_chunker.py** - Intelligent Text Segmentation
-- Configurable chunk size and overlap
-- Respects word/line boundaries for semantic integrity
-- Preserves document context across chunks
-
-### 4. **embedding_manager.py** - Vector Store Integration
-- SentenceTransformers for embeddings (all-MiniLM-L6-v2)
-- ChromaDB for persistent vector storage
-- Supports semantic similarity search
-- Incremental chunk updates
-
-### 5. **field_extractor.py** - Deterministic Field Extraction
-Regex-based extraction with confidence scoring:
-- **Invoice ID** (95% confidence)
-- **Date** (90%)
-- **Vendor Name** (85%)
-- **Amount** (92%)
-- **GST %/Amount** (90%/88%)
-- **TDS Amount** (85%)
-- **TDS Category** (88%)
-
-### 6. **ledger_classifier.py** - Intelligent Account Classification
-- Multi-class expense category classification
-- Vendor → Party account mapping
-- Confidence-based decision making
-- Handles multiple TDS categories
-
-### 7. **self_rag_agent.py** - The Core Intelligence 
-
-**SELF-RAG Flow:**
-```
-1. EXTRACTION
-   └─ Extract fields with confidence scores
-
-2. VALIDATION  
-   └─ Check field completeness and formats
-
-3. CLASSIFICATION
-   └─ Map to ledger accounts
-   └─ Calculate confidence
-
-4. CONFIDENCE CHECK
-   └─ If confidence >= threshold → Approve ✓
-   └─ If confidence < threshold → Retrieve Context
-
-5. CONTEXT RETRIEVAL
-   └─ Query ChromaDB for similar invoices
-   └─ Extract patterns from similar documents
-
-6. REASONING
-   └─ Analyze similar documents' categorizations
-   └─ Refine initial decision with evidence
-
-7. DECISION
-   └─ If confidence now OK → Approve ✓
-   └─ If still uncertain → Flag for User Review
-
-8. RULE LEARNING
-   └─ Store user correction as vendor-specific rule
-   └─ Apply rule to future documents from same vendor
-```
-
-### 8. **excel_ledger.py** - Live Output Management
-- Formatted Excel with headers and styling
-- Auto-append transaction rows
-- Status color coding (green=approved, red=flagged)
-- Summary statistics calculation
-- Maintains running ledger
-
-### 9. **orchestrator.py** - Master Pipeline Orchestrator
-- Coordinates all components
-- Manages document lifecycle
-- Handles user corrections and rule learning
-- Provides summary statistics
-
-## Setup & Installation
-
-### Prerequisites
-- Python 3.10+
-- Tesseract OCR (for PDF processing)
-- System packages: `poppler-utils`
-
-### Installation
-
-```bash
-# On Ubuntu/Debian
-sudo apt-get install tesseract-ocr poppler-utils
-
-# On macOS
-brew install tesseract poppler
-
-# Python packages
-pip install -r requirements.txt
-```
-
-### Environment Configuration
-
-Edit `.env`:
-```
-INBOX_PATH=./inbox
-OUTPUT_PATH=./output
-CHROMA_DB_PATH=./chroma_db
-CONFIG_PATH=./config
-
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-CONFIDENCE_THRESHOLD=0.70
-CHUNK_SIZE=500
-CHUNK_OVERLAP=50
-
-LOG_LEVEL=DEBUG
-```
-
-## Project Structure
-
-```
-AutoBooks/
-├── src/
-│   ├── __init__.py
-│   ├── config.py                  # Configuration & paths
-│   ├── logger.py                  # Logging setup
-│   ├── models.py                  # Pydantic data models
-│   ├── document_decoder.py        # PDF/Excel parsing
-│   ├── document_monitor.py        # Real-time monitoring
-│   ├── text_chunker.py            # Text segmentation
-│   ├── embedding_manager.py       # ChromaDB integration
-│   ├── field_extractor.py         # Regex extraction
-│   ├── ledger_classifier.py       # Account classification
-│   ├── self_rag_agent.py          # Core SELF-RAG logic
-│   ├── excel_ledger.py            # Excel output
-│   └── orchestrator.py            # Pipeline orchestrator
-├── inbox/                         # Input document folder
-├── output/                        # Output location
-│   └── autobooks_ledger.xlsx      # Live Excel ledger
-├── config/                        # Persistent storage
-│   ├── learned_rules.json         # Vendor-specific rules
-│   └── processed_cache.json       # Deduplication cache
-├── chroma_db/                     # Vector store
-├── main.py                        # Entry point
-├── requirements.txt               # Dependencies
-├── .env                           # Configuration
-└── README.md                      # This file
-```
-
-## Usage
-
-### Demo Mode
-
-```bash
-# Run the complete pipeline on current inbox contents
-python main.py
-```
-
-**Output:**
-```
-======================================================================
-AUTOBOOKS - Intelligent Accounting Document Processing
-======================================================================
-
-Scanning inbox: ./inbox
-==============================================================
-Processing: sample_invoice_001.txt
-==============================================================
-Step 1: Decoding document...
-Step 2: Chunking text...
-Step 3: Embedding and upserting to ChromaDB...
-Step 4: Running SELF-RAG agent...
-Step 5: Writing to Excel ledger...
-
-✓ Document processed successfully
-  Transaction ID: TXN_sample_invoice_001_1735...
-  Invoice ID: INV-2024-001
-  Vendor: Premium Office Furnishings
-  Amount: 47200.0
-  Confidence: 88.00%
-  Status: approved
-
-[Similar output for remaining documents...]
-
-==============================================================
-Processing Complete!
-Total documents processed: 3
-
-Ledger Summary:
-  Total Transactions: 3
-  Total Debit: ₹197,200.00
-  Total Credit: ₹178,000.00
-  Total TDS: ₹15,000.00
-  Average Confidence: 86.67%
-  Status Breakdown: {'approved': 3}
-
-Output files:
-  Excel Ledger: /path/to/output/autobooks_ledger.xlsx
-  Learned Rules: /path/to/config/learned_rules.json
-======================================================================
-```
-
-### Programmatic Usage
-
-```python
-from src.orchestrator import AutoBooksOrchestrator
-
-# Initialize
-orchestrator = AutoBooksOrchestrator()
-
-# Process inbox
-results = orchestrator.process_inbox()
-
-# Handle user correction
-orchestrator.handle_user_correction(
-    document_id="sample_invoice_001_1735...",
-    correction={
-        "vendor_name": "Premium Office Furnishings",
-        "debit_account": "office_supplies",
-        "debit_code": "5003",
-        "credit_account": "supplier",
-        "credit_code": "4003",
-        "confidence": 0.99,
-        "reason": "user_feedback"
-    }
-)
-
-# Get summary
-summary = orchestrator.get_ledger_summary()
-print(f"Total transactions: {summary['total_transactions']}")
-```
-
-## Ledger Accounts Reference
-
-### Expense Accounts (Debit)
-- **5001**: Rent
-- **5002**: Utilities
-- **5003**: Office Supplies
-- **5004**: Professional Fees
-- **5005**: Catering
-- **5006**: Equipment
-- **5007**: Travel
-- **5008**: Maintenance
-- **5009**: Advertising
-- **5099**: Other Expenses
-
-### Party Accounts (Credit)
-- **4001**: Landlord
-- **4002**: Utilities Vendor
-- **4003**: Supplier
-- **4004**: Professional
-- **4005**: Contractor
-- **4006**: Employee
-
-## TDS (Tax Deducted at Source) Handling
-
-TDS is automatically calculated for:
-- **Rent**: 10%
-- **Salary**: 5%
-- **Professional/Consultancy**: 10%
-- **Contracts**: 5%
-
-When TDS is present:
-```
-Debit: Expense Account (Full Amount)
-Credit: Party Account (Amount - TDS)
-Credit: TDS Payable Account (TDS Amount)
-```
-
-## Confidence Scoring
-
-The SELF-RAG agent scores each field:
-- **High Confidence** (>85%): Automatically approved
-- **Medium Confidence** (70-85%): Approved with context
-- **Low Confidence** (<70%): Flagged for user review
-
-Confidence factors:
-- Field extraction accuracy
-- Vendor recognition
-- Category clarity
-- Validation status
-
-## Rule Learning Example
-
-### Initial Processing (Low Confidence)
-```
-Vendor: "XYZ Consulting"
-Extracted Category: Unknown (confidence 0.45)
-Status: Flagged for review
-```
-
-### User Correction
-```json
-{
-  "vendor_name": "XYZ Consulting",
-  "debit_account": "professional_fees",
-  "debit_code": "5004",
-  "credit_account": "professional",
-  "credit_code": "4004"
-}
-```
-
-### Learned Rule Saved
-```json
-{
-  "XYZ Consulting": {
-    "debit_account": "professional_fees",
-    "debit_code": "5004",
-    "credit_account": "professional",
-    "credit_code": "4004",
-    "learned_at": "2024-12-28T10:30:00",
-    "correction_reason": "user_feedback"
-  }
-}
-```
-
-### Future Processing
-When "XYZ Consulting" appears again:
-- ✓ Automatically classified to Professional Fees
-- ✓ Confidence: 99%
-- ✓ No user review needed
-
-## Output Files
-
-### 1. **autobooks_ledger.xlsx**
-Live Excel file with columns:
-- Date, Transaction ID, Invoice ID, Vendor
-- Description, Debit Account, Debit Amount
-- Credit Account, Credit Amount, TDS Account, TDS Amount
-- GST Amount, Confidence, Rule Applied, Status
-
-Color coding:
--  Green: Approved transactions
--  Red: Flagged for review
-
-### 2. **learned_rules.json**
-Vendor-specific classification rules:
-```json
-{
-  "Premium Office Furnishings": {
-    "debit_account": "office_supplies",
-    "debit_code": "5003",
-    "credit_account": "supplier",
-    "credit_code": "4003",
-    "learned_at": "2024-12-28T10:30:00",
-    "correction_reason": "user_feedback"
-  }
-}
-```
-
-### 3. **processed_cache.json**
-Deduplication cache to track processed files:
-```json
-{
-  "sample_invoice_001_1735123456": "abc123def456..."
-}
-```
-
-## Performance Characteristics
-
-- **Document Processing**: ~2-5 seconds per invoice (depends on PDF size)
-- **ChromaDB Query**: <500ms for similarity search
-- **Embedding Generation**: ~100ms for typical invoice text
-- **Excel Output**: <100ms append
-
-## Future Enhancements
-
-- Integration with actual Pathway framework for streaming
-- Multi-model confidence (LLM-based fallback)
-- Advanced TDS rule configuration
-- Bank statement matching
-- Tally XML export
-- Real-time UI dashboard
-- Batch processing optimization
-
-## Limitations & Scope
-
-**In Scope (Hackathon):**
-- Single-file processing
-- Text-based accounting documents
-- Rule learning per vendor
-- Excel output generation
-
-**Out of Scope:**
-- Direct Tally integration
-- Multi-company support
-- Advanced reconciliation
-- Real-time streaming (uses polling instead)
-- API endpoint deployment
-
-## Testing
-
-Sample invoices are provided in `inbox/`:
-1. **sample_invoice_001.txt** - Office furniture purchase (GST only)
-2. **sample_invoice_002.txt** - Rent payment (with TDS)
-3. **sample_invoice_003.txt** - Professional consulting (with TDS)
-
-Run demo:
-```bash
-python main.py
-```
-
-## Troubleshooting
-
-### No Tesseract Found
-```bash
-# Install Tesseract
-sudo apt-get install tesseract-ocr
-
-# Or set path in config
-export PATH=$PATH:/usr/bin/tesseract
-```
-
-### ChromaDB Issues
-```bash
-# Delete and reinitialize
-rm -rf chroma_db/
-python main.py
-```
-
-### Low Confidence on All Documents
-- Check field extraction patterns in `field_extractor.py`
-- Add more sample documents to train embeddings
-- Lower `CONFIDENCE_THRESHOLD` if needed
-
-## Contact & Support
-
-Built for: IITM SYNAPTIX Hackathon
-Demo Purpose: Intelligent Accounting Automation
 
 ---
 
-**AutoBooks** - Making Accounting Smarter, One Invoice at a Time 
+##  Project Structure
+
+```
+AutoBooks/
+├── main.py                          # Entry point - runs the orchestrator
+├── requirements.txt                 # Python dependencies
+├── .env                            # Configuration (paths, models, thresholds)
+├── setup_autobooks.bat             # Windows setup script
+│
+├── src/
+│   ├── __init__.py
+│   ├── agent.py                    # SelfRAGAgent - main processing orchestrator
+│   ├── self_rag_agent.py           # Alternative SELF-RAG implementation
+│   ├── models.py                   # Pydantic models (InvoiceFields, Transaction, Rule, etc.)
+│   ├── config.py                   # Settings management (Pydantic BaseSettings)
+│   ├── logger.py                   # Logging configuration
+│   │
+│   ├── document_monitor.py         # Monitors inbox for file changes
+│   ├── ocr_engine.py               # Tesseract OCR for PDF extraction
+│   ├── document_decoder.py         # Multi-format document parsing
+│   │
+│   ├── field_extractor.py          # Regex-based field extraction
+│   ├── invoice_extractor.py        # Invoice-specific extraction
+│   ├── confidence_scorer.py        # Confidence calculation logic
+│   │
+│   ├── text_chunker.py             # Semantic text chunking
+│   ├── embedding_manager.py        # ChromaDB + Sentence Transformers
+│   ├── vector_store.py             # Vector store wrapper for patterns
+│   │
+│   ├── ledger_classifier.py        # Classify transactions to ledger accounts
+│   ├── rules.py                    # Rule learning and persistence
+│   ├── llm_manager.py              # LLM interaction (Ollama)
+│   │
+│   ├── excel_ledger.py             # Excel writing (legacy)
+│   ├── excel_writer.py             # Excel output generation (Openpyxl)
+│   └── orchestrator.py             # Pipeline orchestration
+│
+├── config/
+│   └── rules.json                  # Learned rules (persisted)
+│
+├── chroma_db/
+│   └── chroma.sqlite3              # Vector embeddings database
+│
+├── inbox/
+│   ├── sample_invoice_001.txt      # Example invoice files
+│   ├── sample_invoice_002.txt
+│   └── sample_invoice_003.txt
+│
+├── output/
+│   └── autobooks_ledger.xlsx       # Generated ledger (created on first run)
+│
+├── archive/
+│   └── *_processed.*               # Processed files moved here
+│
+├── context/
+│   ├── prompt_instructions.md      # AI assistant instructions
+│   └── copilot-instructions.md     # GitHub Copilot context
+│
+├── test_core_logic.py              # Unit tests for field extraction
+├── test_rules.py                   # Unit tests for rule learning
+│
+├── LICENSE
+└── README.md
+```
+
+---
+
+##  Quick Start
+
+### Prerequisites
+- Python 3.9+
+- Tesseract OCR (`apt-get install tesseract-ocr` on Linux, `brew install tesseract` on Mac)
+- Ollama (optional, for local LLM; or use API-based alternatives)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repo-url>
+   cd AutoBooks
+   ```
+
+2. **Create virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment** (update `.env` as needed)
+   ```bash
+   cp .env.example .env  # If provided
+   # Edit .env with your paths and settings
+   ```
+
+5. **Run the system**
+   ```bash
+   python main.py
+   ```
+
+The system will:
+- Monitor `./inbox` folder
+- Process new/modified documents
+- Generate `./output/autobooks_ledger.xlsx`
+- Archive processed files to `./archive`
+
+---
+
+##  Configuration
+
+### Key Settings (`.env` or `config.py`)
+
+```env
+# Paths
+INBOX_PATH=./inbox                          # Input documents folder
+ARCHIVE_PATH=./archive                      # Processed files backup
+OUTPUT_PATH=./output                        # Output ledger location
+CHROMA_DB_PATH=./chroma_db                  # Vector store location
+CONFIG_PATH=./config                        # Rules configuration
+
+# Models
+EMBEDDING_MODEL=BAAI/bge-m3                 # Embedding model
+LLM_MODEL=gemma3:4b                         # Local LLM (via Ollama)
+
+# Confidence Thresholds
+CONFIDENCE_THRESHOLD=0.70                   # Overall threshold
+CONFIDENCE_HIGH=0.75                        # Auto-post if ≥ 0.75
+CONFIDENCE_MEDIUM=0.50                      # Query ChromaDB if 0.50-0.75
+
+# Text Processing
+CHUNK_SIZE=500                              # Characters per chunk
+CHUNK_OVERLAP=50                            # Overlap between chunks
+
+# TDS Configuration
+TDS_RATES={"rent": 10, "salary": 5, "professional": 10, "contract": 5}
+TDS_APPLICABLE_CATEGORIES=["rent", "salary", "professional", "contract"]
+
+# Logging
+LOG_LEVEL=DEBUG                             # DEBUG, INFO, WARNING, ERROR
+
+# File Formats
+SUPPORTED_FORMATS=[".pdf", ".xlsx", ".txt"] # Supported input formats
+```
+
+---
+
+## 🔄 Processing Pipeline
+
+### Step-by-Step Flow
+
+1. **Document Monitor** scans inbox every 2 seconds
+   - Detects new/modified files using hash-based deduplication
+   - Filters by supported formats (.pdf, .xlsx, .txt)
+
+2. **OCR/Text Extraction**
+   - PDFs: Convert to images → Tesseract OCR
+   - Excel: Direct cell reading
+   - Text: Read as-is
+
+3. **Field Extraction**
+   - Regex patterns extract: vendor, amount, date, GST, TDS
+   - Returns per-field confidence scores
+
+4. **Confidence Scoring**
+   - Rule-based calculation (0.0 to 1.0)
+   - Considers: extraction success, field validation, pattern matching
+
+5. **SELF-RAG Decision**
+   ```
+   If confidence ≥ 0.75 → AUTO-POST
+     Create transaction, write to Excel, archive file
+   
+   Else if 0.50 ≤ confidence < 0.75 → QUERY VECTOR STORE
+     Retrieve similar vendor patterns from ChromaDB
+     If match found (similarity > 0.8) → POST
+     Else → ASK USER
+   
+   Else if confidence < 0.50 → ASK USER DIRECTLY
+   
+   If user provides correction → LEARN RULE
+     Save to rules.json + update ChromaDB
+     Apply rule to future documents
+   ```
+
+6. **Excel Output**
+   - Append transaction row to `autobooks_ledger.xlsx`
+   - Apply formatting, validations, hyperlinks
+   - Tally-compatible format
+
+7. **Archiving**
+   - Move processed file to `./archive` with timestamp
+   - Prevent re-processing
+
+---
+
+## 📊 SELF-RAG Implementation Details
+
+### What is SELF-RAG?
+
+**Self-Reflective Retrieval-Augmented Generation** = The system reflects on its own confidence and takes different actions:
+
+- **No external feedback needed**: The system learns from user corrections
+- **Context-aware**: Uses embeddings to find similar past decisions
+- **Adaptive**: Rules persist and improve over time
+
+### Confidence Scoring Logic
+
+```python
+# Field extraction confidence
+- Invoice ID found? +0.15
+- Vendor name extracted? +0.20
+- Amount extracted? +0.25
+- Date parsed? +0.15
+- TDS category identified? +0.10
+- Field validations passed? +0.15
+
+Total: Max 1.0
+```
+
+### Rule Matching
+
+When confidence is medium (0.50-0.75):
+1. Generate embedding of current vendor + keywords
+2. Query ChromaDB for nearest neighbors
+3. If similarity score > 0.8 → Use learned category
+4. Else → Ask user for clarification
+
+### Learning Mechanism
+
+User provides correction → System saves:
+```json
+{
+  "vendor": "M/s ABC Consulting",
+  "keywords": ["consulting", "professional", "services"],
+  "debit_account": "Professional Services",
+  "credit_account": "M/s ABC Consulting (Payable)",
+  "tds_applicable": true,
+  "learned_at": "2024-12-20T10:30:00",
+  "applied_count": 0
+}
+```
+
+This rule is applied to all future similar invoices.
+
+---
+
+##  Testing
+
+### Run Unit Tests
+
+```bash
+# Test field extraction and regex patterns
+python test_core_logic.py
+
+# Test rule learning and persistence
+python test_rules.py
+```
+
+### Sample Input
+
+Three sample invoices are provided in `./inbox`:
+- `sample_invoice_001.txt` - Office furniture (GST 18%)
+- `sample_invoice_002.txt` - Professional services
+- `sample_invoice_003.txt` - Rent payment with TDS
+
+Run main.py to process these samples.
+
+---
+
+##  Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| **pathway** | Real-time data streaming (alternative to polling) |
+| **chromadb** | Vector database for embeddings |
+| **sentence-transformers** | Generate embeddings |
+| **pandas** | Data manipulation |
+| **openpyxl** | Excel file writing |
+| **pydantic** | Data validation (models) |
+| **python-dotenv** | Environment configuration |
+| **pillow** | Image processing |
+| **pytesseract** | OCR (requires Tesseract binary) |
+| **pdf2image** | PDF to image conversion |
+| **langchain** | LLM orchestration |
+| **ollama** | Local LLM inference |
+
+---
+
+## 🔍 Output Format
+
+### Excel Ledger (autobooks_ledger.xlsx)
+
+| Column | Description | Example |
+|--------|-------------|---------|
+| Date | Transaction date | 2024-12-20 |
+| Vendor | Vendor/supplier name | M/s Premium Office Furnishings |
+| Debit Account | Expense ledger account | Office Furniture |
+| Debit Amount | Expense amount (₹) | 47200.00 |
+| Credit Account | Payable account | M/s Premium Office Furnishings (Payable) |
+| Credit Amount | Same as debit | 47200.00 |
+| TDS Account | TDS receivable (if applicable) | TDS Receivable - Professional |
+| TDS Amount | TDS deducted (₹) | 4720.00 |
+| Confidence | Confidence score (%) | 85% |
+| Status | Processing result | AUTO_POSTED / USER_CONFIRMED |
+
+---
+
+##  Troubleshooting
+
+### OCR Issues
+```
+Error: pytesseract.TesseractNotFoundError
+Fix: Install Tesseract binary
+  Linux: apt-get install tesseract-ocr
+  Mac: brew install tesseract
+  Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
+```
+
+### ChromaDB Errors
+```
+Error: PersistentClient not found
+Fix: pip install --upgrade chromadb
+```
+
+### LLM Connection
+```
+Error: Connection refused at localhost:11434
+Fix: Start Ollama service (ollama serve) or use API-based LLM
+```
+
+### Memory Issues
+```
+Fix: Reduce CHUNK_SIZE in .env (e.g., 250 instead of 500)
+Fix: Use smaller embedding model (all-MiniLM-L6-v2 instead of BAAI/bge-m3)
+```
+
+---
+
+##  Contributing
+
+1. Create a feature branch (`git checkout -b feature/your-feature`)
+2. Commit changes (`git commit -am 'Add feature'`)
+3. Push to branch (`git push origin feature/your-feature`)
+4. Create Pull Request
+
+---
+
+##  License
+
+See [LICENSE](LICENSE) file for details.
+
+---
+
+##  Future Enhancements
+
+- [ ] Multi-currency support
+- [ ] GST reconciliation and reporting
+- [ ] Integration with Tally API
+- [ ] Web UI for rule management
+- [ ] Mobile app for document capture
+- [ ] Real-time analytics dashboard
+- [ ] Batch processing mode
+- [ ] Document signature verification
+
+---
